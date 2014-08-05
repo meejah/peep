@@ -100,8 +100,12 @@ this::
 
         requests: expected FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
                        got YhddA1kUpMLVODNbhIgHfQn88vioPHLwayTyqwOJEgY
+                  keeping copy in "..."
 
 It will then exit with a status of 1. Freak out appropriately.
+
+A copy of the failing file will be copied to your current directory
+for inspection.
 
 
 Other Niceties
