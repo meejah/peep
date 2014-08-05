@@ -16,11 +16,11 @@ from hashlib import sha256
 from itertools import chain
 from linecache import getline
 from optparse import OptionParser
-from os import listdir
-from os.path import join, basename, splitext
+from os import listdir, environ
+from os.path import join, basename, splitext, split, exists
 import re
 import shlex
-from shutil import rmtree
+from shutil import rmtree, copyfile
 from sys import argv, exit
 from tempfile import mkdtemp
 try:
@@ -366,6 +366,7 @@ def peep_install(argv):
                                                    options=EmptyOptions())
                                 for path in req_paths)))
     downloaded_hashes, downloaded_versions, satisfied_reqs, malformed_reqs = {}, {}, [], []
+    downloaded_files = {}
 
     with ephemeral_dir() as temp_path:
         for req in requirements:
@@ -382,7 +383,9 @@ def peep_install(argv):
             else:
                 name = req.req.project_name  # unsafe name
                 archive_filename = pip_download(req, argv, temp_path)
-                downloaded_hashes[name] = hash_of_file(join(temp_path, archive_filename))
+                fname = join(temp_path, archive_filename)
+                downloaded_files[name] = fname
+                downloaded_hashes[name] = hash_of_file(fname)
                 downloaded_versions[name] = version_of_download(archive_filename, name)
 
         expected_hashes, missing_hashes_reqs = hashes_of_requirements(requirements)
@@ -410,6 +413,21 @@ def peep_install(argv):
             print(preamble, end=' ')
             print(('\n' + ' ' * (len(preamble) + 1)).join(expected_hashes))
             print(' ' * (len(preamble) - 4), 'got', hash_of_download)
+
+            # keep a copy outside the tempdir (in current directory)
+            # for later inspection. If there is already such a file,
+            # we try <filename>-001, -002 etc.
+            fname = downloaded_files[package_name]
+            copy_to = split(fname)[1]
+            leading, ending = splitext(copy_to)
+            count = 0
+            while exists(copy_to):
+                count += 1
+                copy_to = '%s%s-%03d' % (leading, ending, count)
+            whitespace = ' ' * (6 + len(package_name))
+            print('%skeeping copy in "%s".' % (whitespace, copy_to))
+            copyfile(fname, copy_to)
+
         if mismatches:
             print()  # Skip a line before "Not proceeding..."
 
